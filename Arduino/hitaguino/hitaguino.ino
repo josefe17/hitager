@@ -17,8 +17,8 @@ const int CLKOUT = 9;
 #endif
 
 const int SCK_pin = 6;
-const int dout_pin = 7;
-const int din_pin = 2;   //Note: din_pin must have external interrupt feature!
+const int dout_pin = 2;
+const int din_pin = 2;   //Note: din_pin must have external interrupt feature! In this case, is INT0
 const int test_pin = 4;
 
 const char hitagerVersion[] = {"211"};  // Major Version, Minor Version, Fix
@@ -111,11 +111,11 @@ void setup()
   
   /* Pin configuration*/
   pinMode(SCK_pin, OUTPUT);
-  pinMode(dout_pin, OUTPUT);
-  pinMode(din_pin, INPUT);
+  //pinMode(dout_pin, OUTPUT);  
+  pinMode(din_pin, INPUT);  
   
   digitalWrite(SCK_pin, HIGH);
-  digitalWrite(dout_pin, HIGH);
+  //digitalWrite(dout_pin, HIGH);
   digitalWrite(din_pin, HIGH); 
   Serial.begin(115200); 
   Serial.println("Init done");
@@ -336,6 +336,11 @@ void loop()
       digitalWrite(SCK_pin, LOW);
       writePCF7991Reg(0x10,8);
 
+      // Disable din interrupts as muxed
+      // HARDCODED 
+      EIMSK &= ~(1 << INT0);
+      pinMode(dout_pin, OUTPUT);
+      digitalWrite(dout_pin, HIGH);
       for(int i = 0; i<(cmdlength);i++)
       {
           digitalWrite(dout_pin, HIGH);
@@ -357,6 +362,10 @@ void loop()
       }
       digitalWrite(dout_pin, LOW);
       _delay_us(3000);
+      // Re enable RX interrupts
+      pinMode(din_pin, INPUT);
+      digitalWrite(din_pin, HIGH);
+      EIMSK |= (1 << INT0);
       
       readTagResp();
       processManchester();
@@ -575,12 +584,17 @@ void writeToTag(byte *data, int bits)
   
   writePCF7991Reg(0x19,8);
   //writePCF7991Reg(0x10 | delay_p&0xf,8);
+  EIMSK &= ~(1 << INT0);
+  pinMode(dout_pin, OUTPUT);
+  digitalWrite(dout_pin, HIGH);
   digitalWrite(dout_pin, LOW);
-
   _delay_us(20);//20
   digitalWrite(dout_pin, HIGH);
   _delay_us(20);
   digitalWrite(dout_pin, LOW);
+  pinMode(din_pin, INPUT);
+  digitalWrite(din_pin, HIGH);
+  EIMSK |= (1 << INT0);
 
   for(int by=0; by<=bytes; by++) 
   {
@@ -595,21 +609,36 @@ void writeToTag(byte *data, int bits)
       {
         //Serial.print("1");
         for(int i = 0;i<delay_1; i++)
+        {
           _delay_us(10);//180
+        }
+        EIMSK &= ~(1 << INT0);
+        pinMode(dout_pin, OUTPUT);
+        digitalWrite(dout_pin, HIGH);
         digitalWrite(dout_pin, HIGH);
         _delay_us(10);
         digitalWrite(dout_pin, LOW);
+        pinMode(din_pin, INPUT);
+        digitalWrite(din_pin, HIGH);
+        EIMSK |= (1 << INT0);
 
       }
       else
       {
         //Serial.print("0");
         for(int i = 0;i<delay_0; i++)
+        {
           _delay_us(10);//120
+        }
+        EIMSK &= ~(1 << INT0);
+        pinMode(dout_pin, OUTPUT);
+        digitalWrite(dout_pin, HIGH);
         digitalWrite(dout_pin, HIGH);
         _delay_us(10);
         digitalWrite(dout_pin, LOW);
-
+        pinMode(din_pin, INPUT);
+        digitalWrite(din_pin, HIGH);
+        EIMSK |= (1 << INT0);
       }
   
     }
@@ -688,7 +717,9 @@ void communicateTag(byte  *tagcmd, unsigned int cmdLengt)
 
 void writePCF7991Reg(byte _send, uint8_t bits)  
 {
-
+  EIMSK &= ~(1 << INT0);
+  pinMode(dout_pin, OUTPUT);
+  digitalWrite(dout_pin, HIGH);
   pinMode(dout_pin, OUTPUT);
   digitalWrite(dout_pin, LOW);
   _delay_us(50);
@@ -709,7 +740,9 @@ void writePCF7991Reg(byte _send, uint8_t bits)
     digitalWrite(SCK_pin, LOW);                 
 
   }
-  
+  pinMode(din_pin, INPUT);
+  digitalWrite(din_pin, HIGH);
+  EIMSK |= (1 << INT0);
 }
 
 void pin_ISR()
