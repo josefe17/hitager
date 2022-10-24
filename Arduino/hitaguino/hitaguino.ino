@@ -634,7 +634,7 @@ void readTagResp()
   //TIMSK0=0;
   EIFR = (1<<PCIF0);            // Clear EINT0-flag
   TIFR1 = (1<<TOV1);
-  digitalWrite(test_pin,!digitalRead(4));
+  digitalWrite(test_pin,!digitalRead(test_pin));
   attachInterrupt(digitalPinToInterrupt(din_pin) , pin_ISR, CHANGE );
 
   TIMSK1 = (1<<TOIE1); // Activate Timer1 Overflow Interrupt
